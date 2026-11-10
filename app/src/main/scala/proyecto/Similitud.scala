@@ -120,23 +120,32 @@ object Similitud {
     def antes(a: Medicion, b: Medicion): Boolean = {
       val (i1, j1, s1) = a
       val (i2, j2, s2) = b
-      s1 > s2 || (s1 == s2 && (i1 < i2 || (i1 == i2 && j1 < j2)))
+      s1 > s2 || (s1 == s2 && (i1 < i2 || (i1 == i2 && j1 < j2))) // orden lexiografico sobre la tupla
+      // (-s, i, j)
     }
 
+    // este algoritmo es un insertion sort con el buffer acotado
     // Inserta m en un vector ya ordenado y conserva solo los primeros p
     def insertar(m: Medicion, top: Vector[Medicion]): Vector[Medicion] = {
-      val (previos, resto) = top.span(x => antes(x, m))
-      ((previos :+ m) ++ resto).take(p)
+      val (previos, resto) = top.span(x => antes(x, m)) //el vector top nunca tiene más de p elementos
+      // y siempre está ordenado
+      ((previos :+ m) ++ resto).take(p) // los elementos que van antes de m son prefijos
+      // el take(p) mantiene el tamaño acotado
     }
 
+    // el parametro pendientes es lo que falta por procesar mientras que que top ya se resolvio
+    // con la funcion insertar
+    // en pocas palabras esto podria haber sido un foldleft pero esta planteado de esta manera para facilitar
+    // las trazas del informe ya que es una versión explicita y permite mostrar la pila de llamados paso a paso
     @tailrec
-    def aux(pendientes: Vector[Medicion], top: Vector[Medicion]): Vector[Medicion] =
+    def aux(pendientes: Vector[Medicion], top: Vector[Medicion]): Vector[Medicion] = {
       if (pendientes.isEmpty) top // caso base: no quedan mediciones
       else {
         val m = pendientes.head
         val top2 = if (m._3 >= umbral) insertar(m, top) else top
         aux(pendientes.tail, top2) // llamado en posición de cola
       }
+    }
 
     aux(ss, Vector.empty[Medicion])
   }
