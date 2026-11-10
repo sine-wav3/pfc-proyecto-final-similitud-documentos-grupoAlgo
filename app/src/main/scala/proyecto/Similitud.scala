@@ -106,12 +106,13 @@ object Similitud {
   def indiceInvertido(hs: Vector[Huella]): Indice = {
     val ocurrencias: Vector[(Fragmento, Int)] =
       for {
-        (h, i) <- hs.zipWithIndex
-        g      <- h.toVector
-      } yield (g, i)
+        (h, i) <- hs.zipWithIndex // zipwithindex convierte un vector en otro vector indexado que es
+        // finalmente el id del documento que es la posicion en el corpus
+        g      <- h.toVector // se uso tovector porque elfor tiene que devolver el mismo tipo de coleccion que el externo
+      } yield (g, i) // produce la pareja fragmento-documento
     ocurrencias
-      .groupBy { case (g, _) => g }
-      .map { case (g, ps) => g -> ps.map { case (_, i) => i }.toSet }
+      .groupBy { case (g, _) => g } // agrupa segun el valor de f (fragmento)
+      .map { case (g, ps) => g -> ps.map { case (_, i) => i }.toSet } //se queda con los ids y pasa a conjunto
   }
 
   /**
