@@ -1,6 +1,8 @@
 package proyecto
 
 import scala.util.Random
+import scala.annotation.tailrec // tailrec implementado para cumplir el criterio de recursión de cola
+// con la función ranking
 
 /**
  * Detección de similitud entre documentos — versión secuencial.
@@ -114,7 +116,30 @@ object Similitud {
    * truncadas a p. Los empates se rompen por posición, de modo que el
    * resultado no dependa del orden en que llegaron las mediciones.
    */
-  def ranking(ss: Vector[Medicion], umbral: Double, p: Int): Vector[Medicion] = ???
+  def ranking(ss: Vector[Medicion], umbral: Double, p: Int): Vector[Medicion] = {
+    def antes(a: Medicion, b: Medicion): Boolean = {
+      val (i1, j1, s1) = a
+      val (i2, j2, s2) = b
+      s1 > s2 || (s1 == s2 && (i1 < i2 || (i1 == i2 && j1 < j2)))
+    }
+
+    // Inserta m en un vector ya ordenado y conserva solo los primeros p
+    def insertar(m: Medicion, top: Vector[Medicion]): Vector[Medicion] = {
+      val (previos, resto) = top.span(x => antes(x, m))
+      ((previos :+ m) ++ resto).take(p)
+    }
+
+    @tailrec
+    def aux(pendientes: Vector[Medicion], top: Vector[Medicion]): Vector[Medicion] =
+      if (pendientes.isEmpty) top // caso base: no quedan mediciones
+      else {
+        val m = pendientes.head
+        val top2 = if (m._3 >= umbral) insertar(m, top) else top
+        aux(pendientes.tail, top2) // llamado en posición de cola
+      }
+
+    aux(ss, Vector.empty[Medicion])
+  }
 
   /** Solución directa: compara las n (n - 1) / 2 parejas. */
   def detectarDirecto(c: Corpus, k: Int, umbral: Double,
