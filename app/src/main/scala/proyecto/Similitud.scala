@@ -108,7 +108,7 @@ object Similitud {
       for {
         (h, i) <- hs.zipWithIndex
         g      <- h.toVector
-      } yield (g, i)
+      } yield (g, i) // produce la pareja fragmento-documento
     ocurrencias
       .groupBy { case (g, _) => g }
       .map { case (g, ps) => g -> ps.map { case (_, i) => i }.toSet }
