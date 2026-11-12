@@ -75,16 +75,76 @@ class SimilitudTest extends AnyFunSuite {
     val idx = indiceInvertido(huellas(c1, 3))
     assert(idx(Vector("el", "gato", "duerme")) == Set(0, 1))
   }
-
+  // parejasCandidatas prueba -------------------------------------------------
   test("parejasCandidatas: en el ejemplo 2 quedan dos de seis") {
     val idx = indiceInvertido(huellas(c2, 3))
     assert(parejasCandidatas(idx) == Vector((0, 1), (2, 3)))
   }
 
+  // parejasCandidatas pruebas propuestas --------------------------------------
+  test("parejasCandidatas: en el ejemplo 1 queda una de tres") {
+    val idx = indiceInvertido(huellas(c1, 3))
+    assert(parejasCandidatas(idx) == Vector((0, 1)))
+  }
+
+  test("parejasCandidatas: un corpus vacío no tiene parejas") {
+    val idx = indiceInvertido(huellas(Vector.empty[Documento], 3))
+    assert(parejasCandidatas(idx) == Vector.empty)
+  }
+
+  test("parejasCandidatas: un corpus de un solo documento no tiene parejas") {
+    val c: Corpus = Vector(("d0", Vector("a", "b", "c", "d")))
+    val idx = indiceInvertido(huellas(c, 2))
+    assert(parejasCandidatas(idx) == Vector.empty)
+  }
+
+  test("parejasCandidatas: tres documentos iguales dan las tres parejas, sin repetir") {
+    val d = Vector("a", "b", "c")
+    val c: Corpus = Vector(("d0", d), ("d1", d), ("d2", d))
+    val idx = indiceInvertido(huellas(c, 2))
+    assert(parejasCandidatas(idx) == Vector((0, 1), (0, 2), (1, 2)))
+  }
+
+  test("parejasCandidatas: compartir palabras no basta, deben compartir fragmentos") {
+    val c: Corpus = Vector(
+      ("d0", Vector("a", "b", "c", "d")),
+      ("d1", Vector("d", "c", "b", "a")))
+    assert(parejasCandidatas(indiceInvertido(huellas(c, 2))) == Vector.empty)
+  }
+
+  // Ranking prueba -----------------------------------------------------------
   test("ranking: ordena de mayor a menor y trunca a p") {
     val ms: Vector[Medicion] = Vector((0, 1, 0.4), (0, 2, 0.1), (1, 2, 0.9))
     assert(ranking(ms, 0.0, 10).map(_._3) == Vector(0.9, 0.4, 0.1))
     assert(ranking(ms, 0.0, 2).length == 2)
+  }
+
+  // Ranking pruebas propuestas -----------------------------------------------
+
+  test("ranking: filtra las que no alcanzan el umbral") {
+    val ms: Vector[Medicion] = Vector((0, 1, 0.75), (0, 2, 0.2), (1, 2, 0.5), (2, 3, 0.1))
+    assert(ranking(ms, 0.3, 10) == Vector((0, 1, 0.75), (1, 2, 0.5)))
+  }
+
+  test("ranking: el umbral es inclusivo (J >= tau)") {
+    val ms: Vector[Medicion] = Vector((0, 1, 0.5), (0, 2, 0.25), (1, 2, 0.75))
+    assert(ranking(ms, 0.5, 10) == Vector((1, 2, 0.75), (0, 1, 0.5)))
+  }
+
+  test("ranking: empates en similitud se desempatan por (i, j)") {
+    val ms: Vector[Medicion] = Vector((1, 2, 0.5), (0, 2, 0.5), (0, 1, 0.5), (0, 3, 0.5))
+    assert(ranking(ms, 0.0, 10) == Vector((0, 1, 0.5), (0, 2, 0.5), (0, 3, 0.5), (1, 2, 0.5)))
+  }
+
+  test("ranking: el resultado no depende del orden de entrada") {
+    val ms: Vector[Medicion] = Vector((0, 1, 0.9), (0, 2, 0.5), (1, 2, 0.5), (2, 3, 0.7))
+    assert(ranking(ms, 0.0, 10) == ranking(ms.reverse, 0.0, 10))
+    assert(ranking(ms, 0.0, 10) == ranking(ms.sortBy(_._3), 0.0, 10))
+  }
+
+  test("ranking: trunca a p y conserva las mejores") {
+    val ms: Vector[Medicion] = Vector((0, 1, 0.1), (0, 2, 0.9), (1, 2, 0.5), (2, 3, 0.7), (0, 3, 0.3))
+    assert(ranking(ms, 0.0, 3) == Vector((0, 2, 0.9), (2, 3, 0.7), (1, 2, 0.5)))
   }
 
   test("detectar: el ejemplo 2 reporta (0, 1) con 0.75 y (2, 3) con 0.5") {
