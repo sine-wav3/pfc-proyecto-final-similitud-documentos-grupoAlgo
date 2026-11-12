@@ -70,11 +70,47 @@ class SimilitudTest extends AnyFunSuite {
     val ms = similitudes(hs, parejas(3)).map(_._3)
     assert(math.abs(ms(0) - 2.0 / 6.0) < eps && ms(1) == 0.0 && ms(2) == 0.0)
   }
-
+  // indiceInvertido prueba ---------------------------------------------------
   test("indiceInvertido: el fragmento inicial de d0 está en d0 y en d1") {
     val idx = indiceInvertido(huellas(c1, 3))
     assert(idx(Vector("el", "gato", "duerme")) == Set(0, 1))
   }
+
+  // indiceInvertido pruebas propuestas ---------------------------------------}
+
+  test("indiceInvertido: el segundo fragmento compartido de d0 y d1 está en ambos") {
+    val idx = indiceInvertido(huellas(c1, 3))
+    assert(idx(Vector("gato", "duerme", "en")) == Set(0, 1))
+  }
+
+  test("indiceInvertido: los fragmentos exclusivos apuntan a un solo documento") {
+    val idx = indiceInvertido(huellas(c1, 3))
+    assert(idx(Vector("en", "el", "sofa")) == Set(0))
+    assert(idx(Vector("en", "la", "alfombra")) == Set(1))
+    assert(idx(Vector("moja", "el", "parque")) == Set(2))
+  }
+
+  test("indiceInvertido: el ejemplo 1 tiene 9 fragmentos distintos") {
+    // 4 + 4 + 3 fragmentos en las huellas, con 2 compartidos entre d0 y d1
+    val idx = indiceInvertido(huellas(c1, 3))
+    assert(idx.size == 9)
+  }
+
+  test("indiceInvertido: ejemplo 2, fragmento compartido y fragmentos propios") {
+    val idx = indiceInvertido(huellas(c2, 3))
+    assert(idx(Vector("funcion", "recursiva", "termina")) == Set(0, 1))
+    assert(idx(Vector("la", "funcion", "recursiva")) == Set(0))
+    assert(idx(Vector("toda", "funcion", "recursiva")) == Set(1))
+  }
+
+  test("indiceInvertido: ejemplo 2, d2 y d3 comparten sus cuatro primeros fragmentos") {
+    val idx = indiceInvertido(huellas(c2, 3))
+    assert(idx(Vector("el", "paralelismo", "divide")) == Set(2, 3))
+    assert(idx(Vector("el", "trabajo", "en")) == Set(2, 3))
+    assert(idx(Vector("trabajo", "en", "tareas")) == Set(2))
+    assert(idx(Vector("trabajo", "en", "hilos")) == Set(3))
+  }
+
   // parejasCandidatas prueba -------------------------------------------------
   test("parejasCandidatas: en el ejemplo 2 quedan dos de seis") {
     val idx = indiceInvertido(huellas(c2, 3))
