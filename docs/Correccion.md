@@ -277,3 +277,282 @@ s_0 = (a_1, \text{List}(a_2, \ldots, a_k)) \implies a_1 = f(\text{List}(a_1))
 $k$ iteraciones, $l = \text{List}()$.
 
 Esto implica que $P_f(L) == \text{maxAux}(L.\text{head}, L.\text{tail}) == f(L)$
+
+---
+
+# Informe de corrección: `jaccard`, `parejas` y `similitudes`
+
+Para cada función se da su especificación matemática, el programa y el argumento
+de que el programa calcula lo que dice la especificación. `jaccard` y `parejas`
+no son recursivas, así que su argumento es directo, por casos y por las
+propiedades de las operaciones que usan. `similitudes` se argumenta por inducción
+estructural sobre el vector de parejas, que es como está definido `map`.
+
+## 1. `jaccard`
+
+### Especificación
+
+Para dos huellas $A$ y $B$, que son conjuntos finitos de fragmentos:
+
+```math
+J(A, B) = \frac{\lvert A \cap B \rvert}{\lvert A \cup B \rvert} \ \text{ si } A \cup B \neq \emptyset, \qquad J(\emptyset, \emptyset) = 0
+```
+
+### Programa
+
+```scala
+def jaccard(h1: Huella, h2: Huella): Double = {
+  val comunes = h1.intersect(h2).size
+  val union = h1.size + h2.size - comunes
+  if (union == 0) 0.0 else comunes.toDouble / union
+}
+```
+
+### Argumento
+
+Hay que demostrar que
+
+```math
+\forall A, B : \text{jaccard}(A, B) == J(A, B)
+```
+
+**Los valores intermedios.** Por la definición de `intersect` y de `size` en
+`Set`:
+
+```math
+\text{comunes} = \lvert A \cap B \rvert
+```
+
+Por el principio de inclusión y exclusión, que vale para conjuntos finitos:
+
+```math
+\text{union} = \lvert A \rvert + \lvert B \rvert - \lvert A \cap B \rvert = \lvert A \cup B \rvert
+```
+
+Es decir, `union` vale el tamaño de la unión sin haberla construido.
+
+**Caso 1:** $\text{union} = 0$. Entonces $\lvert A \cup B \rvert = 0$, o sea
+$A \cup B = \emptyset$. Como $A \subseteq A \cup B$ y $B \subseteq A \cup B$, se
+sigue que $A = B = \emptyset$. El programa devuelve `0.0`, y la especificación
+dice $J(\emptyset, \emptyset) = 0$. Coinciden, y no se llegó a dividir.
+
+**Caso 2:** $\text{union} > 0$. El programa devuelve
+
+```math
+\frac{\text{comunes}}{\text{union}} = \frac{\lvert A \cap B \rvert}{\lvert A \cup B \rvert} = J(A, B)
+```
+
+El `toDouble` garantiza que la división sea real. Sin él, como
+$\lvert A \cap B \rvert \leq \lvert A \cup B \rvert$, la división entera daría 0
+en todos los casos salvo cuando $A = B$.
+
+Los dos casos son excluyentes y cubren todas las entradas, porque `union` es un
+tamaño y no puede ser negativo. Por lo tanto $\text{jaccard}(A, B) == J(A, B)$
+para todo par de huellas.
+
+### Propiedades que se siguen
+
+- **Rango:** como $0 \leq \lvert A \cap B \rvert \leq \lvert A \cup B \rvert$, se
+  tiene $0 \leq J(A, B) \leq 1$.
+- **Simetría:** la intersección y la suma son conmutativas, así que
+  $J(A, B) = J(B, A)$.
+- **Valor 1:** $J(A, B) = 1$ si y solo si $A = B$ y no son vacías.
+- **Valor 0:** $J(A, B) = 0$ si y solo si $A \cap B = \emptyset$. Esta es la
+  propiedad en la que se apoya el índice invertido: una pareja de documentos que
+  no comparte ningún fragmento tiene similitud 0 y se puede descartar sin
+  calcularla.
+
+### Casos de prueba
+
+Las huellas se arman a mano, de modo que el valor esperado se conoce de antemano
+y la prueba depende solo de `jaccard`.
+
+| Caso | Entrada | Esperado |
+|---|---|---|
+| Solapamiento parcial | 3 y 3 fragmentos, 2 en común | $2/4 = 0.5$ |
+| Huellas iguales | la misma huella, y la misma escrita en otro orden | $1.0$ |
+| Mismas palabras, otro orden | $(a,b),(b,c)$ contra $(b,a),(c,b)$ | $0.0$ |
+| Huellas vacías | ambas vacías, y una vacía en cada posición | $0.0$ |
+| Una contenida en otra | 1 fragmento contra 3 que lo incluyen | $1/3$ |
+| Simetría | 4 y 3 fragmentos, 2 en común, en los dos órdenes | $2/5$ en ambos |
+
+## 2. `parejas`
+
+### Especificación
+
+Para $n \geq 0$, el resultado es la secuencia, en orden lexicográfico y sin
+repetidos, de los elementos del conjunto
+
+```math
+P(n) = \{ (i, j) \mid 0 \leq i < j < n \}
+```
+
+### Programa
+
+```scala
+def parejas(n: Int): Vector[Pareja] =
+  for {
+    i <- (0 until n).toVector
+    j <- i + 1 until n
+  } yield (i, j)
+```
+
+El compilador lo traduce a
+
+```scala
+(0 until n).toVector.flatMap(i => (i + 1 until n).map(j => (i, j)))
+```
+
+### Argumento
+
+Para un $i$ fijo, el `map` interno produce la fila
+
+```math
+\text{fila}(i) = \langle (i, i+1),\ (i, i+2),\ \ldots,\ (i, n-1) \rangle
+```
+
+que es vacía cuando $i + 1 \geq n$. Por la definición de `flatMap`, el resultado
+es la concatenación de las filas en el orden en que se recorre $i$:
+
+```math
+\text{parejas}(n) = \text{fila}(0) \mathbin{+\!\!+} \text{fila}(1) \mathbin{+\!\!+} \cdots \mathbin{+\!\!+} \text{fila}(n-1)
+```
+
+A partir de ahí se demuestran las cuatro partes de la especificación.
+
+**1. Todo lo que se genera está en $P(n)$.** Una pareja $(i, j)$ del resultado
+sale de $\text{fila}(i)$, con $i$ en el rango $[0, n)$ y $j$ en el rango
+$[i+1, n)$. Entonces $0 \leq i$, $i < j$ y $j < n$, que es la condición de
+$P(n)$.
+
+**2. Todo lo que está en $P(n)$ se genera.** Sea $(i, j) \in P(n)$. Como
+$0 \leq i < n$, el `flatMap` pasa por ese $i$. Como $i + 1 \leq j < n$, el `map`
+interno pasa por ese $j$ y produce $(i, j)$.
+
+**3. No hay repetidos.** Los rangos no repiten valores: cada $i$ aparece una
+sola vez en el recorrido externo y, para ese $i$, cada $j$ aparece una sola vez
+en el interno. Dos parejas iguales tendrían que salir del mismo $i$ y del mismo
+$j$, es decir, del mismo paso.
+
+**4. El orden es lexicográfico.** Dentro de una fila el primer componente es
+igual y el segundo crece. Entre filas, todas las parejas de $\text{fila}(i)$
+quedan antes que las de $\text{fila}(i')$ cuando $i < i'$.
+
+**Cantidad.** La fila $i$ tiene $n - 1 - i$ parejas, así que
+
+```math
+\lvert \text{parejas}(n) \rvert = \sum_{i=0}^{n-1} (n - 1 - i) = \sum_{m=0}^{n-1} m = \frac{n(n-1)}{2}
+```
+
+Para $n = 0$ y $n = 1$ la suma da 0 y el resultado es el vector vacío, que
+coincide con $P(0) = P(1) = \emptyset$.
+
+### Casos de prueba
+
+| Caso | Entrada | Esperado |
+|---|---|---|
+| Sin parejas posibles | $n = 0$ y $n = 1$ | vector vacío |
+| Mínimo no vacío | $n = 2$ | $\langle (0,1) \rangle$ |
+| Contenido y orden exactos | $n = 4$ | $\langle (0,1), (0,2), (0,3), (1,2), (1,3), (2,3) \rangle$ |
+| Condición de $P(n)$ | $n = 7$ | toda pareja cumple $0 \leq i < j < n$ |
+| Sin repetidas ni invertidas | $n = 8$ | ninguna se repite y nunca están $(i,j)$ y $(j,i)$ a la vez |
+| Cantidad | $n = 3, 6, 10, 20$ | $3, 15, 45, 190$ |
+
+## 3. `similitudes`
+
+### Especificación
+
+Sean $hs = \langle H_0, \ldots, H_{n-1} \rangle$ un vector de huellas y
+$ps = \langle p_0, \ldots, p_{m-1} \rangle$ un vector de parejas con
+$p_k = (i_k, j_k)$ y $0 \leq i_k, j_k < n$. El resultado es el vector de $m$
+mediciones
+
+```math
+S(hs, ps) = \langle\ (i_k,\ j_k,\ J(H_{i_k}, H_{j_k}))\ \rangle_{k = 0}^{m-1}
+```
+
+Es decir: una medición por pareja, en el mismo orden, con la similitud de las
+dos huellas que la pareja señala.
+
+### Programa
+
+```scala
+def similitudes(hs: Vector[Huella], ps: Vector[Pareja]): Vector[Medicion] =
+  ps.map { case (i, j) => (i, j, jaccard(hs(i), hs(j))) }
+```
+
+Sea $g$ la función anónima que recibe `map`:
+
+```math
+g((i, j)) = (i,\ j,\ \text{jaccard}(H_i, H_j))
+```
+
+### Argumento
+
+`map` está definido recursivamente sobre la secuencia:
+
+```math
+\text{map}(\langle \rangle, g) = \langle \rangle \qquad \text{map}(p \mathbin{+:} ps', g) = g(p) \mathbin{+:} \text{map}(ps', g)
+```
+
+Se demuestra por inducción estructural sobre $ps$ que
+
+```math
+\forall ps : \text{similitudes}(hs, ps) == S(hs, ps)
+```
+
+**Caso base:** $ps = \langle \rangle$.
+
+```math
+\text{similitudes}(hs, \langle \rangle) \rightarrow \text{map}(\langle \rangle, g) \rightarrow \langle \rangle
+```
+
+Por otro lado, $S(hs, \langle \rangle)$ es el vector de cero mediciones. Coinciden.
+
+**Caso de inducción:** $ps = p_0 \mathbin{+:} ps'$, con $p_0 = (i_0, j_0)$. La
+hipótesis de inducción es $\text{similitudes}(hs, ps') == S(hs, ps')$.
+
+```math
+\text{similitudes}(hs, p_0 \mathbin{+:} ps') \rightarrow g(p_0) \mathbin{+:} \text{map}(ps', g)
+```
+
+Por la corrección de `jaccard`, demostrada en la sección 1:
+
+```math
+g(p_0) = (i_0,\ j_0,\ \text{jaccard}(H_{i_0}, H_{j_0})) = (i_0,\ j_0,\ J(H_{i_0}, H_{j_0}))
+```
+
+que es justamente la primera medición de $S(hs, ps)$. Usando la hipótesis de
+inducción sobre el resto:
+
+```math
+\rightarrow (i_0,\ j_0,\ J(H_{i_0}, H_{j_0})) \mathbin{+:} S(hs, ps') = S(hs, p_0 \mathbin{+:} ps')
+```
+
+Por lo tanto $\text{similitudes}(hs, ps) == S(hs, ps)$ para todo vector de
+parejas.
+
+**Lo que se sigue.** El resultado tiene la misma longitud que $ps$ y conserva su
+orden, porque `map` agrega exactamente un elemento por cada elemento recorrido y
+en la misma posición. Además, la medición $k$ depende solo de la pareja $p_k$ y
+no de las demás: por eso partir $ps$ en dos mitades, medir cada una por separado
+y concatenar da el mismo resultado, que es el argumento de corrección de la
+versión paralela.
+
+**Precondición.** Las posiciones de cada pareja deben ser válidas en $hs$. Se
+cumple siempre en el proyecto, porque las parejas salen de `parejas(n)` o de
+`parejasCandidatas`, y en ambos casos $0 \leq i < j < n$.
+
+### Casos de prueba
+
+Se usan tres huellas armadas a mano: $A$ y $B$ con 3 fragmentos cada una y 2 en
+común, y $C$ sin nada en común con ellas.
+
+| Caso | Entrada | Esperado |
+|---|---|---|
+| Sin parejas | $ps$ vacío | vector vacío |
+| Valores conocidos | $\langle A, B, C \rangle$ con las tres parejas | $0.5$, $0.0$, $0.0$ |
+| Orden de llegada | $\langle (1,2), (0,1) \rangle$ | mediciones en ese mismo orden |
+| Solo lo pedido | $\langle (0,2) \rangle$ | una sola medición, $(0, 2, 0.0)$ |
+| Extremos | huellas iguales y huellas vacías | $1.0$ y $0.0$ |
+| Con `parejas(5)` | $\langle A, B, C, A, B \rangle$ | 10 mediciones, mismas parejas, y $1.0$ solo en $(0,3)$ y $(1,4)$ |
