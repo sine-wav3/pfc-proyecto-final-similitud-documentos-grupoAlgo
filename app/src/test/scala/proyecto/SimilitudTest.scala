@@ -108,6 +108,38 @@ class SimilitudTest extends AnyFunSuite {
     assert(parejas(5).length == 10)
   }
 
+  // parejas pruebas propuestas -----------------------------------------------
+
+  test("parejas: con cero o un documento no hay parejas") {
+    assert(parejas(0) == Vector.empty)
+    assert(parejas(1) == Vector.empty)
+  }
+
+  test("parejas: con dos documentos hay una sola pareja, (0, 1)") {
+    assert(parejas(2) == Vector((0, 1)))
+  }
+
+  test("parejas: con cuatro documentos salen las seis, en orden") {
+    assert(parejas(4) ==
+      Vector((0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)))
+  }
+
+  test("parejas: toda pareja cumple 0 <= i < j < n") {
+    val n = 7
+    assert(parejas(n).forall { case (i, j) => 0 <= i && i < j && j < n })
+  }
+
+  test("parejas: no hay repetidas ni invertidas") {
+    val ps = parejas(8)
+    assert(ps.distinct.length == ps.length)
+    assert(ps.forall { case (i, j) => !ps.contains((j, i)) })
+  }
+
+  test("parejas: la cantidad es n (n - 1) / 2 para varios n") {
+    assert(Vector(3, 6, 10, 20).map(n => parejas(n).length) ==
+      Vector(3, 15, 45, 190))
+  }
+
   test("similitudes: el ejemplo 1 da 1/3, 0 y 0") {
     val hs = huellas(c1, 3)
     val ms = similitudes(hs, parejas(3)).map(_._3)
