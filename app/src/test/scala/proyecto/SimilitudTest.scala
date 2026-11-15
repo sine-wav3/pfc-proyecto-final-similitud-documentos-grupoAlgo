@@ -61,6 +61,49 @@ class SimilitudTest extends AnyFunSuite {
     assert(math.abs(jaccard(huella(e2, 3), huella(e3, 3)) - 0.5) < eps)
   }
 
+  // jaccard pruebas propuestas -----------------------------------------------
+  // Las huellas se arman a mano para que estas pruebas dependan solo de jaccard.
+
+  test("jaccard: dos comunes de cuatro fragmentos distintos dan 0.5") {
+    val a: Huella = Set(Vector("a", "b"), Vector("b", "c"), Vector("c", "d"))
+    val b: Huella = Set(Vector("b", "c"), Vector("c", "d"), Vector("d", "e"))
+    assert(math.abs(jaccard(a, b) - 0.5) < eps)
+  }
+
+  test("jaccard: dos huellas iguales dan 1.0") {
+    val a: Huella = Set(Vector("x", "y", "z"), Vector("y", "z", "w"))
+    val b: Huella = Set(Vector("y", "z", "w"), Vector("x", "y", "z"))
+    assert(jaccard(a, a) == 1.0)
+    assert(jaccard(a, b) == 1.0)
+  }
+
+  test("jaccard: mismas palabras en otro orden no son el mismo fragmento") {
+    val a: Huella = Set(Vector("a", "b"), Vector("b", "c"))
+    val b: Huella = Set(Vector("b", "a"), Vector("c", "b"))
+    assert(jaccard(a, b) == 0.0)
+  }
+
+  test("jaccard: con huellas vacías da 0.0 y no divide por cero") {
+    val vacia: Huella = Set.empty
+    val a: Huella = Set(Vector("a", "b"), Vector("b", "c"))
+    assert(jaccard(vacia, vacia) == 0.0)
+    assert(jaccard(a, vacia) == 0.0)
+    assert(jaccard(vacia, a) == 0.0)
+  }
+
+  test("jaccard: una huella contenida en otra da |menor| / |mayor|") {
+    val menor: Huella = Set(Vector("a", "b"))
+    val mayor: Huella = Set(Vector("a", "b"), Vector("b", "c"), Vector("c", "d"))
+    assert(math.abs(jaccard(menor, mayor) - 1.0 / 3.0) < eps)
+  }
+
+  test("jaccard: es simétrico, no importa el orden de los argumentos") {
+    val a: Huella = Set(Vector("a"), Vector("b"), Vector("c"), Vector("d"))
+    val b: Huella = Set(Vector("c"), Vector("d"), Vector("e"))
+    assert(jaccard(a, b) == jaccard(b, a))
+    assert(math.abs(jaccard(a, b) - 2.0 / 5.0) < eps)
+  }
+
   test("parejas: hay n (n - 1) / 2") {
     assert(parejas(5).length == 10)
   }
