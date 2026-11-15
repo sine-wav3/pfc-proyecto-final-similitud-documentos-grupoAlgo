@@ -145,6 +145,46 @@ class SimilitudTest extends AnyFunSuite {
     val ms = similitudes(hs, parejas(3)).map(_._3)
     assert(math.abs(ms(0) - 2.0 / 6.0) < eps && ms(1) == 0.0 && ms(2) == 0.0)
   }
+
+  // similitudes pruebas propuestas -------------------------------------------
+  // Las huellas se arman a mano para que estas pruebas no dependan de huellas.
+  val hA: Huella = Set(Vector("a", "b"), Vector("b", "c"), Vector("c", "d"))
+  val hB: Huella = Set(Vector("b", "c"), Vector("c", "d"), Vector("d", "e"))
+  val hC: Huella = Set(Vector("x", "y"))
+  val hsMano: Vector[Huella] = Vector(hA, hB, hC)
+
+  test("similitudes: sin parejas no hay mediciones") {
+    assert(similitudes(hsMano, Vector.empty) == Vector.empty)
+  }
+
+  test("similitudes: tres huellas a mano dan 0.5, 0 y 0") {
+    assert(similitudes(hsMano, Vector((0, 1), (0, 2), (1, 2))) ==
+      Vector((0, 1, 0.5), (0, 2, 0.0), (1, 2, 0.0)))
+  }
+
+  test("similitudes: respeta el orden en que llegan las parejas") {
+    assert(similitudes(hsMano, Vector((1, 2), (0, 1))) ==
+      Vector((1, 2, 0.0), (0, 1, 0.5)))
+  }
+
+  test("similitudes: solo mide las parejas que se le pasan") {
+    assert(similitudes(hsMano, Vector((0, 2))) == Vector((0, 2, 0.0)))
+  }
+
+  test("similitudes: huellas iguales dan 1.0 y huellas vacías dan 0.0") {
+    val vacia: Huella = Set.empty
+    val hs: Vector[Huella] = Vector(hA, hA, vacia, vacia)
+    assert(similitudes(hs, Vector((0, 1), (2, 3), (0, 2))) ==
+      Vector((0, 1, 1.0), (2, 3, 0.0), (0, 2, 0.0)))
+  }
+
+  test("similitudes: con parejas(n) hay una medición por pareja, en el mismo orden") {
+    val hs: Vector[Huella] = Vector(hA, hB, hC, hA, hB)
+    val ms = similitudes(hs, parejas(5))
+    assert(ms.length == 10)
+    assert(ms.map(m => (m._1, m._2)) == parejas(5))
+    assert(ms.filter(_._3 == 1.0).map(m => (m._1, m._2)) == Vector((0, 3), (1, 4)))
+  }
   // indiceInvertido prueba ---------------------------------------------------
   test("indiceInvertido: el fragmento inicial de d0 está en d0 y en d1") {
     val idx = indiceInvertido(huellas(c1, 3))
