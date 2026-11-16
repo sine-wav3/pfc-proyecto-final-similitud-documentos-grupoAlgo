@@ -73,19 +73,38 @@ object Similitud {
    * Pasa el texto a minúsculas, convierte en separador todo carácter que no
    * sea letra o dígito y devuelve el vector de palabras no vacías.
    */
-  def normalizar(texto: String): Vector[String] = ???
+  def normalizar(texto: String): Vector[String] =
+    texto.toLowerCase
+      .replaceAll("[^\\p{L}\\p{N}]", " ")
+      .split("\\s+")
+      .filter(_.nonEmpty)
+      .toVector
 
   /**
    * Los t - k + 1 fragmentos de k palabras consecutivas, en el orden en que
    * aparecen; el vector vacío si el documento tiene menos de k palabras.
    */
-  def fragmentos(ts: Vector[String], k: Int): Vector[Fragmento] = ???
+  def fragmentos(ts: Vector[String], k: Int): Vector[Fragmento] = {
+    if (k <= 0 || ts.length < k) Vector.empty
+    else {
+      def aux(pos: Int): Vector[Fragmento] = {
+        if (pos > ts.length - k) Vector.empty
+        else {
+          ts.slice(pos, pos + k) +: aux(pos + 1)
+        }
+      }
+
+      aux(0)
+    }
+  }
 
   /** El conjunto de fragmentos del documento: un repetido cuenta una vez. */
-  def huella(d: Documento, k: Int): Huella = ???
+  def huella(d: Documento, k: Int): Huella =
+    fragmentos(palabrasDoc(d), k).toSet
 
   /** Una huella por documento del corpus, en el mismo orden. */
-  def huellas(c: Corpus, k: Int): Vector[Huella] = ???
+  def huellas(c: Corpus, k: Int): Vector[Huella] =
+    c.map(d => huella(d, k))
 
   /**
    * Índice de Jaccard de dos huellas, el tamaño de la intersección sobre el de
@@ -172,9 +191,22 @@ object Similitud {
 
   /** Solución directa: compara las n (n - 1) / 2 parejas. */
   def detectarDirecto(c: Corpus, k: Int, umbral: Double,
-                      p: Int): Vector[Medicion] = ???
+                      p: Int): Vector[Medicion] = {
+    val hs = huellas(c, k)
+    val ps = parejas(c.length)
+    val ss = similitudes(hs, ps)
+
+    ranking(ss, umbral, p)
+  }
 
   /** Solución con índice: compara solo las parejas candidatas. */
   def detectarConIndice(c: Corpus, k: Int, umbral: Double,
-                        p: Int): Vector[Medicion] = ???
+                        p: Int): Vector[Medicion] = {
+    val hs = huellas(c, k)
+    val idx = indiceInvertido(hs)
+    val ps = parejasCandidatas(idx)
+    val ss = similitudes(hs, ps)
+
+    ranking(ss, umbral, p)
+  }
 }
